@@ -1,0 +1,6 @@
+WIFI_SSID = "sua_rede_aqui"
+WIFI_PASSWORD = "sua_senha_aqui"
+MQTT_BROKER = "192.168.0.100"
+MQTT_PORT = 1883
+MQTT_USER = ""
+MQTT_PASSWORD = ""
