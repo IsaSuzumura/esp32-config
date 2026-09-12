@@ -1,3 +1,6 @@
 {
-    "micropico.syncFolder": "src"
+    "micropico.syncFolder": "src",
+    "python.analysis.extraPaths": [
+        "./src/lib"
+    ]
 }
