@@ -1,0 +1,9 @@
+# Credenciais reais (Wi-Fi + MQTT) - nunca versionar
+config.py
+
+# Cache do Python
+__pycache__/
+*.pyc
+
+# Configuração local de porta/dispositivo, se usar a extensão MicroPico
+.picowgo

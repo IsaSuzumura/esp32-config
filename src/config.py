@@ -1,38 +1,37 @@
-# ==========================================
-# CONFIGURAÇÕES DE HARDWARE (Mapeamento de Pinos)
-# ==========================================
+# Configurações do Sistema
+# Wi-Fi
+WIFI_SSID = "NOME_DA_SUA_REDE"
+WIFI_PASSWORD = "SENHA_DA_SUA_REDE"
 
-# Sensor de Temperatura e Umidade do Ar (DHT11)
-PIN_DHT = 4
+# Broker MQTT
+MQTT_BROKER = "c5f638bd9b894b7591b3df0cab6ee925.s1.eu.hivemq.cloud"
+MQTT_PORT = 8883
+MQTT_CLIENT_ID = "estufa_esp32_device"
+MQTT_USER = "estufa_esp32"
+MQTT_PASSWORD = "mqtt@estuf4"
 
-# Sensor de Luminosidade (BH1750 - Barramento I2C)
-PIN_I2C_SDA = 21
-PIN_I2C_SCL = 22
-BH1750_ADDR = 0x23
+# Tópicos MQTT
+TOPICO_SENSORES = "estufa/sensores"
+TOPICO_CONFIG = "estufa/config"
+TOPICO_COMANDOS = "estufa/comandos"
 
-# Sensor de Umidade do Solo (Analógico)
-PIN_SOIL_MOISTURE = 34
+# Pinos do ESP32
+PINO_DHT11 = 4          # Temperatura/umidade do ar
+PINO_SOLO_ADC = 34      # Umidade do solo (entrada analógica)
+PINO_I2C_SDA = 21       # BH1750 (luminosidade) - I2C
+PINO_I2C_SCL = 22
+PINO_RELE_BOMBA = 26    # Relé da bomba
 
-# Atuador: Módulo Relé (Bomba de Água)
-PIN_RELAY_PUMP = 5
+# Calibração sensor de umidade do solo
+SOLO_VALOR_SECO = 3300
+SOLO_VALOR_MOLHADO = 1200
 
+INTERVALO_LEITURA_S = 10
 
-# ==========================================
-# REGRAS DE NEGÓCIO E CALIBRAÇÃO (Edge Computing)
-# ==========================================
-SOIL_ADC_DRY = 4095     # Testado: Terra seca 
-SOIL_ADC_WET = 0        # Testado: Água
-
-# Limiar de Irrigação (Threshold)
-IRRIGATION_THRESHOLD_PERCENT = 40.0 
-
-# Tempo de rega em segundos (evita encharcar o substrato)
-PUMP_ACTIVE_TIME_SEC = 5 
-
-
-# ==========================================
-# CONFIGURAÇÕES MQTT (Tópicos)
-# ==========================================
-MQTT_CLIENT_ID = "esp32_estufa_01"
-MQTT_TOPIC_TELEMETRY = b"estufa/sensores" 
-MQTT_TOPIC_COMMAND   = b"estufa/controle"
+LIMITES_PADRAO = {
+    "nome": "Padrao",
+    "temp_min": 15.0,
+    "temp_max": 30.0,
+    "umi_min": 30.0,
+    "umi_max": 70.0,
+}

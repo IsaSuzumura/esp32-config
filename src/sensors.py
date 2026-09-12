@@ -1,91 +1,68 @@
-import machine
 import dht
 import time
-import config
+from machine import Pin, ADC, I2C
+from config import (
+    PINO_DHT11,
+    PINO_SOLO_ADC,
+    PINO_I2C_SDA,
+    PINO_I2C_SCL,
+    SOLO_VALOR_SECO,
+    SOLO_VALOR_MOLHADO,
+)
 
-# ==========================================
-# INICIALIZAÇÃO DOS SENSORES
-# ==========================================
+# Inicializacao dos sensores
+_dht_sensor = dht.DHT11(Pin(PINO_DHT11))
 
-# 1. DHT11
-sensor_dht = dht.DHT11(machine.Pin(config.PIN_DHT))
+_solo_adc = ADC(Pin(PINO_SOLO_ADC))
+_solo_adc.atten(ADC.ATTN_11DB)   
+_solo_adc.width(ADC.WIDTH_12BIT)  
 
-# 2. BH1750 (Comunicação Direta I2C - Sem bibliotecas externas!)
-i2c = machine.SoftI2C(scl=machine.Pin(config.PIN_I2C_SCL), sda=machine.Pin(config.PIN_I2C_SDA))
-
-# 3. Sensor de Umidade do Solo
-adc_solo = machine.ADC(machine.Pin(config.PIN_SOIL_MOISTURE))
-adc_solo.atten(machine.ADC.ATTN_11DB) 
-
-
-# ==========================================
-# FUNÇÕES DE LEITURA
-# ==========================================
-
-def ler_umidade_solo_percentual():
-    valor_bruto = adc_solo.read()
-    
-    if valor_bruto > config.SOIL_ADC_DRY:
-        valor_bruto = config.SOIL_ADC_DRY
-    elif valor_bruto < config.SOIL_ADC_WET:
-        valor_bruto = config.SOIL_ADC_WET
-        
-    diferenca_total = config.SOIL_ADC_DRY - config.SOIL_ADC_WET
-    leitura_atual = config.SOIL_ADC_DRY - valor_bruto
-    
-    if diferenca_total == 0: return 0.0 # Previne erros matemáticos
-    
-    porcentagem = (leitura_atual / diferenca_total) * 100.0
-    return round(porcentagem, 1)
+_i2c = I2C(0, scl=Pin(PINO_I2C_SCL), sda=Pin(PINO_I2C_SDA), freq=100000)
 
 
-def ler_clima():
-    """Lê temperatura e umidade com um pequeno atraso para o sensor acordar."""
+_BH1750_ADDR = 0x23
+_BH1750_CONTINUOUS_HIGH_RES = 0x10
+
+
+def ler_temperatura_umidade_ar():
     try:
-        time.sleep(0.5) # Dá tempo para o DHT11 processar a leitura
-        sensor_dht.measure()
-        return sensor_dht.temperature(), sensor_dht.humidity()
-    except OSError:
+        _dht_sensor.measure()
+        return _dht_sensor.temperature(), _dht_sensor.humidity()
+    except Exception as e:
+        print("Erro ao ler DHT11:", e)
         return None, None
 
 
-def ler_luminosidade():
-    """Comunicação nível de máquina direto com o chip BH1750."""
+def ler_umidade_solo():
     try:
-        # Envia o comando 0x10 (Continuous High-Resolution Mode)
-        i2c.writeto(config.BH1750_ADDR, b'\x10')
-        
-        # O manual do BH1750 pede 120ms para a luz ser calculada
-        time.sleep_ms(150) 
-        
-        # Recebe os 2 bytes de resposta
-        dados = i2c.readfrom(config.BH1750_ADDR, 2)
-        
-        # Matemática oficial do datasheet para converter os bytes em Lux
-        lux = ((dados[0] << 8) | dados[1]) / 1.2
-        return round(lux, 1)
+        leitura_bruta = _solo_adc.read()
+        faixa = SOLO_VALOR_SECO - SOLO_VALOR_MOLHADO
+        if faixa == 0:
+            return None
+        percentual = (SOLO_VALOR_SECO - leitura_bruta) / faixa * 100
+        return max(0, min(100, round(percentual, 1)))
     except Exception as e:
-        print("Erro de comunicação I2C:", e)
+        print("Erro ao ler sensor de umidade do solo:", e)
         return None
 
 
-def obter_dados_completos():
-    temp, umid_ar = ler_clima()
-    solo_pct = ler_umidade_solo_percentual()
-    luminosidade = ler_luminosidade()
-    
-    return {
-        "temperatura": temp,
-        "umidade_ar": umid_ar,
-        "umidade_solo": solo_pct,
-        "luminosidade": luminosidade
-    }
+def ler_luminosidade():
+    try:
+        _i2c.writeto(_BH1750_ADDR, bytes([_BH1750_CONTINUOUS_HIGH_RES]))
+        time.sleep_ms(180) 
+        dados = _i2c.readfrom(_BH1750_ADDR, 2)
+        bruto = (dados[0] << 8) | dados[1]
+        return round(bruto / 1.2, 1)
+    except Exception as e:
+        print("Erro ao ler BH1750:", e)
+        return None
 
-# ==========================================
-# TESTE LOCAL
-# ==========================================
-if __name__ == "__main__":
-    print("Aguardando sensores estabilizarem...")
-    time.sleep(2)
-    dados = obter_dados_completos()
-    print("Dados gerados:", dados)
+
+def ler_todos_sensores():
+    temperatura, umidade_ar = ler_temperatura_umidade_ar()
+    return {
+        "temperatura": temperatura,
+        "umidade_ar": umidade_ar,
+        "umidade_solo": ler_umidade_solo(),
+        "luminosidade": ler_luminosidade(),
+    }
