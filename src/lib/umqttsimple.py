@@ -40,11 +40,12 @@ class MQTTClient:
     def connect(self, clean_session=True):
         addr = socket.getaddrinfo(self.server, self.port)[0][-1]
         self.sock = socket.socket()
+        self.sock.settimeout(10)
         self.sock.connect(addr)
 
         if self.ssl:
-            import ussl
-            self.sock = ussl.wrap_socket(
+            import ssl
+            self.sock = ssl.wrap_socket(
                 self.sock, server_hostname=self.ssl_params.get(
                     "server_hostname", self.server))
 
@@ -52,14 +53,14 @@ class MQTTClient:
         msg = bytearray(b"\x04MQTT\x04\x02\0\0")  
 
         sz = 10 + 2 + len(self.client_id)
-        msg[7] |= 0x02 if clean_session else 0
+        msg[6] |= 0x02 if clean_session else 0
 
         if self.user is not None:
             sz += 2 + len(self.user) + 2 + len(self.password)
-            msg[7] |= 0xC0
+            msg[6] |= 0xC0
         if self.keepalive:
-            msg[8] |= self.keepalive >> 8
-            msg[9] |= self.keepalive & 0x00FF
+            msg[7] |= self.keepalive >> 8
+            msg[8] |= self.keepalive & 0x00FF
 
         i = 1
         while sz > 0x7F:

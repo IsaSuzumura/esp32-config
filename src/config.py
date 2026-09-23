@@ -1,7 +1,7 @@
 # Configurações do Sistema
 # Wi-Fi
-WIFI_SSID = "NOME_DA_SUA_REDE"
-WIFI_PASSWORD = "SENHA_DA_SUA_REDE"
+WIFI_SSID = "RedeInferior"
+WIFI_PASSWORD = "04121417"
 
 # Broker MQTT
 MQTT_BROKER = "c5f638bd9b894b7591b3df0cab6ee925.s1.eu.hivemq.cloud"

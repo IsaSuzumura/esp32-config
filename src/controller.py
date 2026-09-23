@@ -1,5 +1,7 @@
 import time
 import ujson
+import network
+import machine
 from umqttsimple import MQTTClient
 import config
 import sensors
@@ -53,12 +55,18 @@ def _processar_comando(msg):
     
         
 def _conectar_mqtt():
+    import machine
+    import ubinascii
+    mac = ubinascii.hexlify(machine.unique_id()).decode()
+    client_id_unico = config.MQTT_CLIENT_ID + "_" + mac
+
     cliente = MQTTClient(
-        client_id=config.MQTT_CLIENT_ID,
+        client_id=client_id_unico,           
         server=config.MQTT_BROKER,
         port=config.MQTT_PORT,
         user=config.MQTT_USER,
         password=config.MQTT_PASSWORD,
+        keepalive=60,                        
         ssl=True,
         ssl_params={"server_hostname": config.MQTT_BROKER},
     )
@@ -77,6 +85,7 @@ def _conectar_mqtt():
     
     
 def _publicar_sensores(cliente, leituras: dict):
+    global _mqtt
     if cliente is None:
         return
     try:
@@ -85,6 +94,11 @@ def _publicar_sensores(cliente, leituras: dict):
         print("Publicado em estufa/sensores:", payload)
     except Exception as e:
         print("Erro ao publicar leituras (provavelmente offline):", e)
+        try:
+            cliente.sock.close() 
+        except:
+            pass
+        _mqtt = None
        
         
 def _executar_edge_computing(leituras: dict):
@@ -108,6 +122,12 @@ def iniciar():
     
 def executar_loop():
     global _mqtt
+
+    if not network.WLAN(network.STA_IF).isconnected():
+        print("Wi-Fi desconectado! Reiniciando a placa em 3 segundos para restaurar rede...")
+        time.sleep(3)
+        machine.reset()
+
     if _mqtt is None:
         _mqtt = _conectar_mqtt()
 
@@ -115,8 +135,13 @@ def executar_loop():
         try:
             _mqtt.check_msg()
         except Exception as e:
-            print("Conexao MQTT perdida:", e)
+            print("Conexao MQTT perdida no check_msg:", e)
+            try:
+                _mqtt.sock.close() 
+            except:
+                pass
             _mqtt = None
+            return 
 
     leituras = sensors.ler_todos_sensores()
 
