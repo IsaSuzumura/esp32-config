@@ -20,8 +20,10 @@ def conectar_wifi(timeout_s=15):
                   "Seguindo em modo offline / autonomo.")
             return False
         time.sleep(0.5)
-        
-        print("Wi-Fi conectado: ", wlan.ifconfig())
-        return True
+
+    # CORREÇÃO: estas duas linhas estavam dentro do while e a função
+    # retornava True depois de 0,5 s mesmo sem estar conectada.
+    print("Wi-Fi conectado: ", wlan.ifconfig())
+    return True
 
 conectar_wifi()

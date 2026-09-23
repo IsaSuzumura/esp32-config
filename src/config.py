@@ -1,6 +1,6 @@
 # Configurações do Sistema
 # Wi-Fi
-WIFI_SSID = "RedeInferior"
+WIFI_SSID = "RedeSuperior"
 WIFI_PASSWORD = "04121417"
 
 # Broker MQTT

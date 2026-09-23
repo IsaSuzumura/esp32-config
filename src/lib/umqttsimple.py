@@ -21,6 +21,7 @@ class MQTTClient:
         self.sock = None
         self.cb = None
         self._pid = 0
+        self._suback_rc = None
 
     def set_callback(self, f):
         self.cb = f
@@ -135,7 +136,8 @@ class MQTTClient:
         while True:
             op = self.wait_msg()
             if op == 0x90:  # SUBACK
-                return
+                # 0, 1 ou 2 = aceito | 0x80 (128) = broker RECUSOU (sem permissão)
+                return self._suback_rc
 
     def _read_remaining_length(self):
         n = 0
@@ -167,6 +169,11 @@ class MQTTClient:
     def _process_packet(self, op):
         if op == 0xD0:  # PINGRESP
             self.sock.read(1)
+            return op
+        if op == 0x90:  # SUBACK: guarda o código de retorno da inscrição
+            sz = self._read_remaining_length()
+            dados = self.sock.read(sz)
+            self._suback_rc = dados[-1] if dados else None
             return op
         if op & 0xF0 != 0x30:  
             sz = self._read_remaining_length()
