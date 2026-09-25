@@ -21,8 +21,7 @@ def conectar_wifi(timeout_s=15):
             return False
         time.sleep(0.5)
 
-    # CORREÇÃO: estas duas linhas estavam dentro do while e a função
-    # retornava True depois de 0,5 s mesmo sem estar conectada.
+    # Antes estas linhas estavam DENTRO do while (retornava "conectado" sem estar)
     print("Wi-Fi conectado: ", wlan.ifconfig())
     return True
 

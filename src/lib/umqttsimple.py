@@ -21,7 +21,19 @@ class MQTTClient:
         self.sock = None
         self.cb = None
         self._pid = 0
-        self._suback_rc = None
+        self.lw_topic = None
+        self.lw_msg = None
+        self.lw_qos = 0
+        self.lw_retain = False
+
+    def set_last_will(self, topic, msg, retain=False, qos=0):
+        """Mensagem que o BROKER publica se a placa cair sem se despedir."""
+        assert 0 <= qos <= 2
+        assert topic
+        self.lw_topic = topic.encode() if isinstance(topic, str) else topic
+        self.lw_msg = msg.encode() if isinstance(msg, str) else msg
+        self.lw_qos = qos
+        self.lw_retain = retain
 
     def set_callback(self, f):
         self.cb = f
@@ -59,6 +71,10 @@ class MQTTClient:
         if self.user is not None:
             sz += 2 + len(self.user) + 2 + len(self.password)
             msg[6] |= 0xC0
+        if self.lw_topic:
+            sz += 2 + len(self.lw_topic) + 2 + len(self.lw_msg)
+            msg[6] |= 0x4 | (self.lw_qos & 0x1) << 3 | (self.lw_qos & 0x2) << 3
+            msg[6] |= self.lw_retain << 5
         if self.keepalive:
             msg[7] |= self.keepalive >> 8
             msg[8] |= self.keepalive & 0x00FF
@@ -73,6 +89,9 @@ class MQTTClient:
         self.sock.write(premsg[: i + 2])
         self.sock.write(msg)
         self._send_str(self.client_id)
+        if self.lw_topic:
+            self._send_str(self.lw_topic)
+            self._send_str(self.lw_msg)
         if self.user is not None:
             self._send_str(self.user)
             self._send_str(self.password)
@@ -136,8 +155,7 @@ class MQTTClient:
         while True:
             op = self.wait_msg()
             if op == 0x90:  # SUBACK
-                # 0, 1 ou 2 = aceito | 0x80 (128) = broker RECUSOU (sem permissão)
-                return self._suback_rc
+                return
 
     def _read_remaining_length(self):
         n = 0
@@ -169,11 +187,6 @@ class MQTTClient:
     def _process_packet(self, op):
         if op == 0xD0:  # PINGRESP
             self.sock.read(1)
-            return op
-        if op == 0x90:  # SUBACK: guarda o código de retorno da inscrição
-            sz = self._read_remaining_length()
-            dados = self.sock.read(sz)
-            self._suback_rc = dados[-1] if dados else None
             return op
         if op & 0xF0 != 0x30:  
             sz = self._read_remaining_length()
